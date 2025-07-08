@@ -1,4 +1,5 @@
 src/
+scripts/
 tsconfig.json
 tsup.config.ts
 .eslintrc.js
