@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      base-64:
-        specifier: ^1.0.0
-        version: 1.0.0
       image-js:
         specifier: ^0.37.0
         version: 0.37.0
@@ -915,9 +912,6 @@ packages:
 
   base-64@0.1.0:
     resolution: {integrity: sha512-Y5gU45svrR5tI2Vt/X9GPd3L0HNIKzGu202EjxrXMpuc2V2CiKgemAbUUsqYmZJvPtCXoUKjNZwBJzsNScUbXA==}
-
-  base-64@1.0.0:
-    resolution: {integrity: sha512-kwDPIFCGx0NZHog36dj+tHiwP4QMzsZ3AgMViUBKI0+V5n4U0ufTCUMhnQ04diaRI8EX/QcPfql7zlhZ7j4zgg==}
 
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
@@ -3735,8 +3729,6 @@ snapshots:
   balanced-match@1.0.2: {}
 
   base-64@0.1.0: {}
-
-  base-64@1.0.0: {}
 
   base64-js@1.5.1: {}
 

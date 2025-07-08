@@ -9,10 +9,7 @@ import * as RNFS from "react-native-fs";
 import { ModelConfig } from "./types";
 import { joinPath, snakeToCamel } from "./utils";
 import { Tokenizer } from "./tokenizer";
-// import * as jpeg from "jpeg-js";
-// import * as png from "fast-png";
-// import { Image } from "image-js";
-// import { decode as atob } from "base-64";
+import * as jpeg from "jpeg-js";
 
 const loadONNX = async (
   path: string,
@@ -87,18 +84,9 @@ export class Moondream {
 
   async encodeImage(imageURI: string): Promise<any> {
     const imageData = await RNFS.readFile(imageURI, "base64");
-    console.log(imageData);
-    // const buffer = Uint8Array.from(atob(imageData), (c) => c.charCodeAt(0));
-    // const buffer2 = Buffer.from(imageData, "base64");
-    // const dataURL = `data:image/jpeg;base64,${imageData}`;
-    // console.log(buffer);
-    // console.log(buffer2);
-    // const image = jpeg.decode(buffer, { useTArray: true });
-    // const image = png.decode(buffer);
-    // const image = await Image.load(imageData);
+    const buffer = Uint8Array.from(atob(imageData), (c) => c.charCodeAt(0));
+    const image = jpeg.decode(buffer, { useTArray: true });
 
-    // console.log(image);
-
-    // return image;
+    return image;
   }
 }
