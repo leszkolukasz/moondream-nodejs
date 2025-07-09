@@ -47,7 +47,7 @@ export const resize = (
   arr: nj.NdArray,
   options: { targetWidth: number; targetHeight: number; algorithm?: string }
 ): nj.NdArray => {
-  options.algorithm = options.algorithm ?? "bicubic";
+  options.algorithm = options.algorithm ?? "bilinear";
   const resized = resizeLib(arr.selection, {
     ...options,
     targetWidth: options.targetHeight,
@@ -103,4 +103,55 @@ export const concatenateAlongAxis = (
   }
 
   return swapaxes(concatenated, lastAxis, axis);
+};
+
+// in-place
+export const assignSlice = (
+  arr: nj.NdArray,
+  slice: ([number, number] | null)[],
+  value: nj.NdArray
+) => {
+  const normalizedSlice = slice.map((s, i) => {
+    if (s == null) {
+      return [0, arr.shape[i]];
+    }
+
+    return s;
+  });
+
+  const sliceSize = normalizedSlice.reduce(
+    (acc, [start, end]) => acc * (end - start),
+    1
+  );
+
+  if (sliceSize !== totalSize(value.shape)) {
+    throw new Error(
+      `Slice size ${sliceSize} does not match value size ${value.size}`
+    );
+  }
+
+  const arrSize = totalSize(arr.shape);
+  const arrStride = arr.selection.stride;
+
+  for (let i = 0; i < arrSize; i++) {
+    const indices = posToIndices(i, arrStride);
+    let valid = true;
+
+    for (let j = 0; j < normalizedSlice.length; j++) {
+      const [start, end] = normalizedSlice[j];
+      if (indices[j] < start || indices[j] >= end) {
+        valid = false;
+        break;
+      }
+    }
+
+    if (valid) {
+      const valueIndices = indices.map((idx, j) => {
+        const [start] = normalizedSlice[j];
+        return idx - start;
+      });
+
+      arr.set(...indices, value.get(...valueIndices));
+    }
+  }
 };

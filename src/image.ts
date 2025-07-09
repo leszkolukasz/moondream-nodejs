@@ -40,7 +40,7 @@ const normalize = (
   mean: number = 0.5,
   std: number = 0.5 // 0.5?
 ): nj.NdArray => {
-  return arr.subtract(mean).divide(std);
+  return arr.divide(255.0).subtract(mean).divide(std);
 };
 
 // Input: (height, width, 3) tensor
@@ -64,7 +64,6 @@ export const createPatches = (
       resize(imageArr, {
         targetWidth: patchSize,
         targetHeight: patchSize,
-        algorithm: "bicubic",
       })
     ),
   ];
@@ -99,7 +98,6 @@ export const createPatches = (
         const patch = resize(cropped, {
           targetWidth: patchSize,
           targetHeight: patchSize,
-          algorithm: "bicubic",
         });
 
         patches.push(normalize(patch));

@@ -44,7 +44,7 @@ export class Tokenizer {
     const tokens = tokenIds.map(
       (id) => this.invVocab[id] ?? this.unkToken ?? "<unk>"
     );
-    return tokens.join("");
+    return tokens.join("").replace("Ġ", " ");
   }
 
   private simpleSplit(text: string): string[] {
@@ -80,7 +80,7 @@ export class Tokenizer {
   }
 }
 
-// const path = "../../moondream/data/tokenizer.json";
+// const path = "../moondream-mobile/assets/models/tokenizer.json";
 // const file = Bun.file(path);
 // const config = await file.json();
 
@@ -89,5 +89,5 @@ export class Tokenizer {
 // const encoded = tokenizer.encode("Hello, world!");
 // console.log("Encoded:", encoded);
 
-// const decoded = tokenizer.decode(encoded);
+// const decoded = tokenizer.decode(encoded); // Example token IDs
 // console.log("Decoded:", decoded);
