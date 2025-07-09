@@ -42,12 +42,17 @@ export const swapaxes = (
   return newArr;
 };
 
+// Input: (height, width, channels)
 export const resize = (
   arr: nj.NdArray,
   options: { targetWidth: number; targetHeight: number; algorithm?: string }
 ): nj.NdArray => {
   options.algorithm = options.algorithm ?? "bicubic";
-  const resized = resizeLib(arr.selection, options);
+  const resized = resizeLib(arr.selection, {
+    ...options,
+    targetWidth: options.targetHeight,
+    targetHeight: options.targetWidth, // Library expects (width, height, ...) but input is of shape (height, width, ...)
+  });
   return new nj.NdArray(
     resized.data,
     resized.shape,
@@ -59,4 +64,43 @@ export const resize = (
 export const toTensor = (arr: nj.NdArray): TypedTensor<"float32"> => {
   const typedArray = Float32Array.from(arr.flatten().tolist());
   return new Tensor("float32", typedArray, arr.shape);
+};
+
+export const fromTensor = (tensor: TypedTensor<"float32">): nj.NdArray => {
+  const arr = Array.from(tensor.data);
+  return nj.array(arr).reshape(tensor.dims);
+};
+
+// nj does not not support concatenation along arbitrary axes directly,
+// but it can be simulated by swapping axes, concatenating, and swapping back.
+export const concatenateAlongAxis = (
+  arr: nj.NdArray[],
+  axis: number
+): nj.NdArray => {
+  const lastAxis = arr[0].shape.length - 1;
+
+  if (axis == lastAxis) {
+    return nj.concatenate(arr);
+  }
+
+  let swapped = arr.map((a) => swapaxes(a, axis, lastAxis));
+
+  const shape = swapped[0].shape;
+  if (shape.length > 3) {
+    // Concatenation in nj is hardcoded up to 3D arrays ¯\_(ツ)_/¯
+    const newShape = shape.slice(0, -1);
+    swapped = swapped.map((a) => {
+      return a.reshape(totalSize(newShape), a.shape[lastAxis]);
+    });
+  }
+
+  let concatenated = nj.concatenate(swapped);
+
+  if (shape.length > 3) {
+    // Reshape back to the original shape
+    const newShape = shape.slice(0, -1);
+    concatenated = concatenated.reshape(...newShape, concatenated.shape[1]);
+  }
+
+  return swapaxes(concatenated, lastAxis, axis);
 };

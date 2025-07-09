@@ -5,12 +5,24 @@ import { InferenceSession, TypedTensor, Tensor } from "onnxruntime-node"; // TOD
 import { readFile } from "fs/promises"; // TODO: remove
 import { ModelConfig } from "./types";
 import { joinPath, loadONNX, snakeToCamel } from "./utils";
-import { loadImage, imageToTensor, createPatches } from "./image";
+import {
+  loadImage,
+  imageToTensor,
+  createPatches,
+  processPatchEmbeddings,
+  EncodedImage,
+} from "./image";
 import { Tokenizer } from "./tokenizer";
 import { MAX_IMAGE_SIZE } from "./constants";
 // @ts-expect-error adsd
 import * as nj from "numjs";
-import { resize, swapaxes, toTensor } from "./ndarray";
+import {
+  concatenateAlongAxis,
+  fromTensor,
+  resize,
+  swapaxes,
+  toTensor,
+} from "./ndarray";
 
 export class Moondream {
   visionEncoder!: InferenceSession;
@@ -79,7 +91,7 @@ export class Moondream {
     return instance;
   }
 
-  async encodeImage(imageURI: string): Promise<any> {
+  async encodeImage(imageURI: string): Promise<EncodedImage> {
     const image = await loadImage(imageURI);
     let imageTensor = imageToTensor(image);
 
@@ -98,14 +110,40 @@ export class Moondream {
       });
     }
 
+    // eslint-disable-next-line prefer-const
     let [patches, patchTemplate] = createPatches(imageTensor);
     patches = swapaxes(patches, 2, 3);
     patches = swapaxes(patches, 1, 2); // (num patches, 3, patchSize, patchSize)
-    const res = this.visionEncoder.run({
+
+    let result = await this.visionEncoder.run({
       input: toTensor(patches),
     });
 
-    return res;
+    let patchEmb = fromTensor(result.output as TypedTensor<"float32">); // (num patches, 729, 720)
+    patchEmb = processPatchEmbeddings(patchEmb, patchTemplate);
+
+    patchEmb = patchEmb.reshape(1, 729, 1440);
+    result = await this.visionProjection.run({
+      input: toTensor(patchEmb),
+    });
+
+    const inputEmb = fromTensor(result.output as TypedTensor<"float32">); // (1, 729, 1024)
+
+    result = await this.textDecoder.run({
+      input_embeds: toTensor(inputEmb),
+      kv_cache: this.initialKVCache, // (24, 2, 1, 16, 1, 64)
+    });
+
+    const newKVCache = fromTensor(
+      result.new_kv_cache as TypedTensor<"float32">
+    ); // (24, 2, 1, 16, 729, 64)
+
+    const kvCache = concatenateAlongAxis(
+      [fromTensor(this.initialKVCache), newKVCache],
+      4
+    );
+
+    return { kvCache };
   }
 }
 

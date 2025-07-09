@@ -22,3 +22,9 @@ export const loadONNX = async (
 ): Promise<InferenceSession> => {
   return InferenceSession.create(path, ortSettings);
 };
+
+export const assert = (condition: boolean, message: string = "") => {
+  if (!condition) {
+    throw message || "Assertion failed";
+  }
+};
