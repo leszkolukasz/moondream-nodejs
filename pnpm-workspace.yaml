@@ -1,2 +1,5 @@
 onlyBuiltDependencies:
+  - deasync
   - esbuild
+  - onnxruntime-node
+  - sharp
