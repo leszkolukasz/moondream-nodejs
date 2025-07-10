@@ -1,4 +1,4 @@
-import { InferenceSession } from "onnxruntime-node"; // TODO: change to onnxruntime-react-native
+import { InferenceSession } from "onnxruntime-react-native";
 
 export const joinPath = (a: string, b: string): string => {
   if (a.endsWith("/")) {

@@ -1,7 +1,7 @@
-// import * as RNFS from "react-native-fs";
-import { readFile } from "fs/promises"; // TODO: remove
+import * as RNFS from "react-native-fs";
+// import { readFile } from "fs/promises";
 import * as jpeg from "jpeg-js";
-// @ts-expect-error adsd
+// @ts-expect-error No types
 import * as nj from "numjs";
 import { PATCH_SIZE } from "./constants";
 import { concatenateAlongAxis, resize } from "./ndarray";
@@ -12,8 +12,8 @@ export type EncodedImage = {
 };
 
 export const loadImage = async (imageURI: string): Promise<jpeg.UintArrRet> => {
-  // const imageData = await RNFS.readFile(imageURI, "base64");
-  const imageData = await readFile(imageURI, { encoding: "base64" });
+  const imageData = await RNFS.readFile(imageURI, "base64");
+  // const imageData = await readFile(imageURI, { encoding: "base64" });
   const buffer = Uint8Array.from(atob(imageData), (c) => c.charCodeAt(0));
   const image = jpeg.decode(buffer, { useTArray: true });
   return image;

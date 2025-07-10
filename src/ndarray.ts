@@ -1,7 +1,8 @@
 // @ts-expect-error dasdad
 import * as nj from "numjs";
-import { TypedTensor, Tensor } from "onnxruntime-node";
-// @ts-expect-error adsd
+import { TypedTensor, Tensor } from "onnxruntime-react-native";
+// import { TypedTensor, Tensor } from "onnxruntime-node";
+// @ts-expect-error No types
 import resizeLib from "ndarray-resize";
 
 const totalSize = (shape: number[]): number => {
@@ -62,7 +63,10 @@ export const resize = (
 };
 
 export const toTensor = (arr: nj.NdArray): TypedTensor<"float32"> => {
-  const typedArray = Float32Array.from(arr.flatten().tolist());
+  console.log("Shape", arr.shape);
+  const x = arr.flatten().tolist();
+  console.log("Len", x.length);
+  const typedArray = Float32Array.from(x);
   return new Tensor("float32", typedArray, arr.shape);
 };
 

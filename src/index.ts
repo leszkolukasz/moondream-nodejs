@@ -1,8 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { InferenceSession, TypedTensor, Tensor } from "onnxruntime-node"; // TODO: change to onnxruntime-react-native
-// import * as RNFS from "react-native-fs";
-import { readFile } from "fs/promises"; // TODO: remove
+// import { InferenceSession, TypedTensor, Tensor } from "onnxruntime-node";
+import {
+  InferenceSession,
+  TypedTensor,
+  Tensor,
+} from "onnxruntime-react-native";
+import * as RNFS from "react-native-fs";
+// import { readFile } from "fs/promises";
 import { ModelConfig } from "./types";
 import { joinPath, loadONNX, snakeToCamel } from "./utils";
 import {
@@ -14,7 +19,7 @@ import {
 } from "./image";
 import { Tokenizer } from "./tokenizer";
 import { CONTEXT_WINDOW, MAX_IMAGE_SIZE } from "./constants";
-// @ts-expect-error adsd
+// @ts-expect-error No types
 import * as nj from "numjs";
 import {
   assignSlice,
@@ -57,7 +62,7 @@ export class Moondream {
     const instance = new Moondream();
 
     const ortSettings: InferenceSession.SessionOptions = {
-      executionProviders: ["cuda"],
+      executionProviders: ["xnnpack"], // ["cuda"]
       graphOptimizationLevel: "all",
       logSeverityLevel: 3,
     };
@@ -82,13 +87,13 @@ export class Moondream {
     }
 
     instance.config = JSON.parse(
-      // await RNFS.readFile(joinPath(modelPath, "config.json"), "utf8")
-      await readFile(joinPath(modelPath, "config.json"), "utf8")
+      await RNFS.readFile(joinPath(modelPath, "config.json"), "utf8")
+      // await readFile(joinPath(modelPath, "config.json"), "utf8")
     );
 
     const initialKVCacheJJSON = JSON.parse(
-      // await RNFS.readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
-      await readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
+      await RNFS.readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
+      // await readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
     );
 
     instance.initialKVCache = new Tensor(
@@ -99,8 +104,8 @@ export class Moondream {
 
     instance.tokenizer = Tokenizer.fromConfig(
       JSON.parse(
-        // await RNFS.readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
-        await readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
+        await RNFS.readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
+        // await readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
       )
     );
 
@@ -122,7 +127,6 @@ export class Moondream {
       imageTensor = resize(imageTensor, {
         targetWidth,
         targetHeight,
-        algorithm: "bicubic",
       });
     }
 
@@ -135,14 +139,19 @@ export class Moondream {
       input: toTensor(patches),
     });
 
+    console.log("Vision encoder finished");
+
     let patchEmb = fromTensor(result.output as TypedTensor<"float32">); // (num patches, 729, 720)
-    // console.log(patchEmb.tolist());
     patchEmb = processPatchEmbeddings(patchEmb, patchTemplate);
+
+    console.log("Patch processing finished");
 
     patchEmb = patchEmb.reshape(1, 729, 1440);
     result = await this.visionProjection.run({
       input: toTensor(patchEmb),
     });
+
+    console.log("Vision projection finished");
 
     const inputEmb = fromTensor(result.output as TypedTensor<"float32">); // (1, 729, 1024)
 
@@ -151,9 +160,18 @@ export class Moondream {
       kv_cache: this.initialKVCache, // (24, 2, 1, 16, 1, 64)
     });
 
-    const newKVCache = fromTensor(
-      result.new_kv_cache as TypedTensor<"float32">
-    ); // (24, 2, 1, 16, 729, 64)
+    console.log("Text decoder finished");
+
+    let newKVCache = fromTensor(result.new_kv_cache as TypedTensor<"float32">); // (24, 2, 1, 16, 729, 64)
+
+    newKVCache = newKVCache.slice(
+      null,
+      null,
+      null,
+      null,
+      [0, 5], // For speedup
+      null
+    );
 
     const kvCache = concatenateAlongAxis(
       [fromTensor(this.initialKVCache), newKVCache],
@@ -178,13 +196,21 @@ export class Moondream {
 
     inputEmbeds = toTensor(inputEmbeds);
 
+    console.log("Starting generation loop...");
+
     while (generatedTokens < maxTokens) {
+      console.log(kvCache.shape, kvSize);
+      const x = toTensor(
+        kvCache.slice(null, null, null, null, [0, kvSize], null)
+      );
+      console.log("kvCache slice shape:", x.dims);
+      console.log("inputEmbeds shape:", inputEmbeds.dims);
       let result = await this.textDecoder.run({
         input_embeds: inputEmbeds,
-        kv_cache: toTensor(
-          kvCache.slice(null, null, null, null, [0, kvSize], null)
-        ),
+        kv_cache: x,
       });
+
+      console.log("Text decoder finished");
 
       const kvCacheUpdate = fromTensor(
         result.new_kv_cache as TypedTensor<"float32">
@@ -212,6 +238,8 @@ export class Moondream {
           [1, 1]
         ),
       });
+
+      console.log("Text encoder finished");
 
       inputEmbeds = result.input_embeds as TypedTensor<"float32">;
       inputLen = 1;
@@ -241,15 +269,16 @@ export class Moondream {
       result.input_embeds as TypedTensor<"float32">
     );
     const encodedImage = await this.encodeImage(imageURI);
-    // console.log(encodedImage.kvCache.tolist());
+
+    console.log("Image encoded");
 
     return this.generate(inputEmbeds, encodedImage, maxTokens);
   }
 }
-const moondram = await Moondream.load("../moondream-mobile/assets/models");
+// const moondram = await Moondream.load("../moondream-mobile/assets/models");
 // const res = await moondram.encodeImage("jojo.jpg");
-const res = await moondram.caption("jojo-mini.jpg", "normal", 50);
-console.log(res);
+// const res = await moondram.caption("jojo-mini.jpg", "normal", 50);
+// console.log(res);
 // let x = 638 / 2 + 120;
 // let y = 900 / 2;
 // console.log(image.get(0, y, x), image.get(1, y, x), image.get(2, y, x));
