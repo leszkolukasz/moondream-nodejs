@@ -63,9 +63,7 @@ export const resize = (
 };
 
 export const toTensor = (arr: nj.NdArray): TypedTensor<"float32"> => {
-  console.log("Shape", arr.shape);
   const x = arr.flatten().tolist();
-  console.log("Len", x.length);
   const typedArray = Float32Array.from(x);
   return new Tensor("float32", typedArray, arr.shape);
 };

@@ -169,7 +169,7 @@ export class Moondream {
       null,
       null,
       null,
-      [0, 5], // For speedup
+      null, // [0, 5], // For speedup
       null
     );
 
