@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// import { InferenceSession, TypedTensor, Tensor } from "onnxruntime-node";
-import {
-  InferenceSession,
-  TypedTensor,
-  Tensor,
-} from "onnxruntime-react-native";
-import * as RNFS from "react-native-fs";
-// import { readFile } from "fs/promises";
+import { InferenceSession, TypedTensor, Tensor } from "onnxruntime-node";
+// import {
+//   InferenceSession,
+//   TypedTensor,
+//   Tensor,
+// } from "onnxruntime-react-native";
+// import * as RNFS from "react-native-fs";
+import { readFile } from "fs/promises";
 import { ModelConfig } from "./types";
 import { joinPath, loadONNX, snakeToCamel } from "./utils";
 import {
@@ -62,7 +62,7 @@ export class Moondream {
     const instance = new Moondream();
 
     const ortSettings: InferenceSession.SessionOptions = {
-      executionProviders: ["xnnpack"], // ["cuda"]
+      executionProviders: ["cuda"], //["xnnpack"]
       graphOptimizationLevel: "all",
       logSeverityLevel: 3,
     };
@@ -87,13 +87,13 @@ export class Moondream {
     }
 
     instance.config = JSON.parse(
-      await RNFS.readFile(joinPath(modelPath, "config.json"), "utf8")
-      // await readFile(joinPath(modelPath, "config.json"), "utf8")
+      // await RNFS.readFile(joinPath(modelPath, "config.json"), "utf8")
+      await readFile(joinPath(modelPath, "config.json"), "utf8")
     );
 
     const initialKVCacheJJSON = JSON.parse(
-      await RNFS.readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
-      // await readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
+      // await RNFS.readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
+      await readFile(joinPath(modelPath, "initial_kv_cache.json"), "utf8")
     );
 
     instance.initialKVCache = new Tensor(
@@ -104,8 +104,8 @@ export class Moondream {
 
     instance.tokenizer = Tokenizer.fromConfig(
       JSON.parse(
-        await RNFS.readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
-        // await readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
+        // await RNFS.readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
+        await readFile(joinPath(modelPath, "tokenizer.json"), "utf8")
       )
     );
 
@@ -199,18 +199,14 @@ export class Moondream {
     console.log("Starting generation loop...");
 
     while (generatedTokens < maxTokens) {
-      console.log(kvCache.shape, kvSize);
       const x = toTensor(
         kvCache.slice(null, null, null, null, [0, kvSize], null)
       );
-      console.log("kvCache slice shape:", x.dims);
-      console.log("inputEmbeds shape:", inputEmbeds.dims);
+
       let result = await this.textDecoder.run({
         input_embeds: inputEmbeds,
         kv_cache: x,
       });
-
-      console.log("Text decoder finished");
 
       const kvCacheUpdate = fromTensor(
         result.new_kv_cache as TypedTensor<"float32">
@@ -238,8 +234,6 @@ export class Moondream {
           [1, 1]
         ),
       });
-
-      console.log("Text encoder finished");
 
       inputEmbeds = result.input_embeds as TypedTensor<"float32">;
       inputLen = 1;
@@ -275,10 +269,3 @@ export class Moondream {
     return this.generate(inputEmbeds, encodedImage, maxTokens);
   }
 }
-// const moondram = await Moondream.load("../moondream-mobile/assets/models");
-// const res = await moondram.encodeImage("jojo.jpg");
-// const res = await moondram.caption("jojo-mini.jpg", "normal", 50);
-// console.log(res);
-// let x = 638 / 2 + 120;
-// let y = 900 / 2;
-// console.log(image.get(0, y, x), image.get(1, y, x), image.get(2, y, x));

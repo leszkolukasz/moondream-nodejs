@@ -1,7 +1,7 @@
 // @ts-expect-error dasdad
 import * as nj from "numjs";
-import { TypedTensor, Tensor } from "onnxruntime-react-native";
-// import { TypedTensor, Tensor } from "onnxruntime-node";
+// import { TypedTensor, Tensor } from "onnxruntime-react-native";
+import { TypedTensor, Tensor } from "onnxruntime-node";
 // @ts-expect-error No types
 import resizeLib from "ndarray-resize";
 
